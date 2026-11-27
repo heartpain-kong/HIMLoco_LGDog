@@ -210,7 +210,7 @@ HIMLoco 自带的接触/跟踪/姿态那套保留，**步态塑形部分参考 O
 
 ## 许可
 
-本仓库**自行编写**的部分（LgDog1 适配与配置、`deploy/` 部署栈、sim2sim 增强、`tools/eval_stairs.py`、`tools/render_stairs.py`、调参体系与全部文档）以 **MIT** 发布，见 [LICENSE](LICENSE)。
+本仓库**自行编写**的部分（LgDog1 适配与配置、`deploy/` 部署栈、sim2sim 增强、`tools/eval_stairs.py`、`tools/render_stairs.py`、调参体系与全部文档）以 **MIT** 发布，见 [LICENSE](LICENSE)。逐项范围见 [`docs/NOTICE_许可范围.md`](docs/NOTICE_许可范围.md)。
 
 继承自上游的文件保留各自原始许可，不被 MIT 覆盖：
 

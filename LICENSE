@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 heartpain · 漓光战队 (Liguang Team)
+Copyright (c) 2026 heartpain / Liguang Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,22 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-NOTE ON SCOPE / 适用范围说明
-
-The MIT grant above covers the work authored in this repository: the LgDog1
-port and configuration, the deployment stack under deploy/, the sim2sim
-harness additions, tools/eval_stairs.py, tools/render_stairs.py, the tuning
-workflow and all documentation.
-
-Files inherited from upstream projects keep their original licenses and are
-NOT relicensed by this file:
-
-  * HIMLoco (OpenRobotLab)        — CC BY-NC-SA 4.0   docs/LICENSE_HIMLoco_CC-BY-NC-SA.txt
-  * legged_gym (leggedrobotics)   — BSD-3-Clause      legged_gym/LICENSE
-  * rsl_rl (leggedrobotics)       — BSD-3-Clause      rsl_rl/LICENSE
-
-Reward-shaping functions adapted from OpenDogeRobotics/OpenDoge_train
-(Apache-2.0) are credited in the README and keep their Apache-2.0 terms.
