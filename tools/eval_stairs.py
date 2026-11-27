@@ -20,7 +20,8 @@ SCENE = os.path.join(ROOT, 'legged_gym', 'resources', 'robots', 'LgDog1', 'xml',
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--policy', required=True)
+    ap.add_argument('--policy', default=os.path.join(
+        ROOT, 'legged_gym', 'logs', 'flat_LgDog1', 'exported', 'policies', 'policy_V51_18600.pt'))
     ap.add_argument('--json', default=None, help='policy 渚ц溅 json锛堟帶鍒跺绾︽潈濞佹潵婧愶級')
     ap.add_argument('--lane', type=float, default=1.0)
     ap.add_argument('--step-h', type=float, default=0.10)
