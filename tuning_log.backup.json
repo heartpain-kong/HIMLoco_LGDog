@@ -1,0 +1,413 @@
+[
+  {
+    "timestamp": "2026-09-03T10:13:30",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round2_baseline",
+    "diagnosis": "第二轮 Go1 基线复现；第一轮末均值 episode=943.27、reward=13.57",
+    "changes": {
+      "param1": "无（沿用 Go1 当前 env_cfg/train_cfg）"
+    },
+    "expected_effect": "mean_episode_length > 800，mean_reward > 10，训练不崩溃",
+    "actual_effect": "FAILED: Isaac Gym 初始化成功，但第 1 次 PPO 更新 CUDA OOM（4096 env，约 8GB 显存）"
+  },
+  {
+    "timestamp": "2026-09-03T10:15:35",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round2_baseline_1024",
+    "diagnosis": "第二轮基线第一次尝试因 4096 env 显存不足（CUDA OOM）",
+    "changes": {
+      "env.num_envs": "4096 -> 1024"
+    },
+    "expected_effect": "完成训练更新且不 OOM；mean_episode_length 逐步超过 800，mean_reward 超过 10",
+    "actual_effect": "FAILED: 1024 env 可运行但策略在约 55 轮退化；episode=28、terrain_level=0、reward=-0.42，已停止"
+  },
+  {
+    "timestamp": "2026-09-03T10:21:09",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round2_4096_mb16",
+    "diagnosis": "1024-env 版本退化；恢复第一轮并降低 PPO 更新峰值显存",
+    "changes": {
+      "env.num_envs": "1024 -> 4096",
+      "algorithm.num_mini_batches": "4 -> 16"
+    },
+    "expected_effect": "4096 env 能完成 PPO 更新且不 OOM；前 100 轮不出现 episode 持续跌破 100",
+    "actual_effect": "CANCELLED: 用户确认第一轮使用 2048 env；4096/16-mini-batch 仅做 smoke 验证，未作为正式轮次"
+  },
+  {
+    "timestamp": "2026-09-03T10:23:47",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round2_baseline_2048",
+    "diagnosis": "按用户确认恢复第一轮并行规模，先做第二轮 Go1 基线复现",
+    "changes": {
+      "env.num_envs": "1024 -> 2048（恢复第一轮设置）；algorithm.num_mini_batches: 保持 4"
+    },
+    "expected_effect": "完成 PPO 更新且不 OOM；前 100 轮 episode 不持续跌破 100",
+    "actual_effect": "PARTIAL: 原参数 2048-env 基线仅运行到第 35 轮即因用户确认已有目标并准备新配置而停止；末 episode=43.25、terrain_level=0"
+  },
+  {
+    "timestamp": "2026-09-03T10:41:55",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round2_go1_3072",
+    "diagnosis": "第二轮 Go1：沿用第一轮目标，测试用户刚修改的命令范围与 feet_air_time；早期退化按正常探索观察",
+    "changes": {
+      "commands.ranges.lin_vel_x": "[-1.0, 1.0] -> [-4.0, 4.0]",
+      "commands.ranges.lin_vel_y": "[-1.0, 1.0] -> [-3.0, 3.0]",
+      "commands.ranges.ang_vel_yaw": "[-3.14, 3.14] -> [-3.5, 3.5]",
+      "rewards.scales.feet_air_time": "0.0 -> 0.5",
+      "CLI env.num_envs": "2048 -> 3072"
+    },
+    "expected_effect": "完成训练且不 OOM；保持稳定行走，mean_episode_length > 800，mean_reward > 10",
+    "actual_effect": "PARTIAL: 训练暂停于约 1909 轮；末 mean_episode_length=957.13、mean_reward=6.82，已达到阶段稳定状态"
+  },
+  {
+    "timestamp": "2026-09-03T14:18:21",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V1",
+    "diagnosis": "新一轮 Go1 调参：上一轮已稳定，本轮收窄线速度命令并提高 feet_air_time 奖励",
+    "changes": {
+      "commands.ranges.lin_vel_x": "-4..4 -> -1..1",
+      "commands.ranges.lin_vel_y": "-3..3 -> -1..1",
+      "rewards.scales.feet_air_time": "0.5 -> 1.0"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；稳定后 mean_episode_length > 800，mean_reward > 5",
+    "actual_effect": "PARTIAL: 暂停于约 5076 轮；末 mean_episode_length=896.54、mean_reward=11.72，已完成 sim2sim 验证，未跑满 8000"
+  },
+  {
+    "timestamp": "2026-09-03T22:16:20",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round4_go1_3072",
+    "diagnosis": "新一轮 Go1：上一版已完成 sim2sim 且稳定，调整竖直速度/机身角速度惩罚与足端离地奖励目标",
+    "changes": {
+      "rewards.scales.lin_vel_z": "-2.0 -> -2.2",
+      "rewards.scales.ang_vel_xy": "-0.05 -> -0.1",
+      "rewards.clearance_height_target": "-0.2 -> -0.1"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；稳定后 mean_episode_length > 800，mean_reward > 8；便于后续 sim2sim",
+    "actual_effect": "SUCCESS: 完成 8000 轮；末 mean_episode_length=853.96、mean_reward=9.25、rew_tracking_lin_vel=0.6749，无 OOM/NaN"
+  },
+  {
+    "timestamp": "2026-09-04T12:31:27",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep04_12-34-44_round5_repeat",
+    "diagnosis": "上一轮 8000 轮已完成并导出策略；按要求开启同配置独立复现训练",
+    "changes": {
+      "param1": "无参数变化；Go1 当前配置保持不变；从零初始化"
+    },
+    "expected_effect": "复现上一轮稳定结果；mean_episode_length > 800；mean_reward > 8；无 OOM/NaN",
+    "actual_effect": "PARTIAL: 训练停止于约 1961 轮；末 mean_episode_length=853.89、mean_reward=8.69；使用 model_1960 提取策略"
+  },
+  {
+    "timestamp": "2026-09-04T20:23:21",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V2",
+    "diagnosis": "重新开启新一轮 Go1 训练；沿用当前配置，从零复现",
+    "changes": {
+      "param1": "无参数变化；不加载 checkpoint；新建独立 run"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；mean_episode_length > 800，mean_reward > 8；无 OOM/NaN",
+    "actual_effect": "PARTIAL: 训练停止于约 7561 轮；末 mean_episode_length=852.06、mean_reward=9.27；使用 model_7560 导出策略"
+  },
+  {
+    "timestamp": "2026-09-05T11:02:38",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V3",
+    "diagnosis": "V2 已完成并导出；新一轮提高速度课程上限与线速度奖励，并微调竖直稳定和高度目标",
+    "changes": {
+      "commands.max_curriculum": "2.0 -> 4.0",
+      "rewards.scales.tracking_lin_vel": "1.0 -> 1.2",
+      "rewards.scales.lin_vel_z": "-2.2 -> -2.3",
+      "rewards.base_height_target": "0.30 -> 0.32",
+      "rewards.clearance_height_target": "-0.10 -> -0.20"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；mean_episode_length > 800，mean_reward > 8；无 OOM/NaN",
+    "actual_effect": "FAILED: 训练约 5847 轮出现后期崩溃（episode=132、reward=-9.35、smoothness=-41.41）；选用退化前 model_5600 导出，训练点 episode=687.54、reward=5.50，play tracking_lin_vel=0.9264、tracking_ang_vel=0.4340"
+  },
+  {
+    "timestamp": "2026-09-05T22:28:05",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep05_22-32-14_round8_after_v3",
+    "diagnosis": "V3 在约 5847 轮后期退化，已选 model_5600 导出；新一轮改用 3 维直接 yaw 命令并调整速度课程",
+    "changes": {
+      "commands.max_curriculum": "4.0 -> 3.0",
+      "commands.num_commands": "4 -> 3",
+      "commands.heading_command": "True -> False",
+      "commands.ranges.lin_vel_x": "-1..1 -> -1.5..1.5",
+      "commands.ranges.lin_vel_y": "-1..1 -> -1.5..1.5",
+      "rewards.base_height_target": "0.32 -> 0.30"
+    },
+    "expected_effect": "3 维命令模式无索引错误；3072 env 下无 OOM/NaN；后期不再崩溃，mean_episode_length > 800、mean_reward > 8",
+    "actual_effect": "FAILED: 完成 8000 轮但末端退化，末 episode=768.50、reward=1.71、smoothness=-2.00；默认导出稳定 model_5400（play tracking_lin_vel=0.8831、tracking_ang_vel=0.1758），另保留 model_8000 导出（0.9116/0.0961）"
+  },
+  {
+    "timestamp": "2026-09-06T13:05:07",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V4",
+    "diagnosis": "上一轮完成 8000 轮但末端平滑性退化；新一轮收窄速度范围、增强 yaw 跟踪与高度约束、降低 feet_air_time",
+    "changes": {
+      "commands.ranges.lin_vel_x": "-1.5..1.5 -> -1..1",
+      "commands.ranges.lin_vel_y": "-1.5..1.5 -> -1..1",
+      "rewards.scales.tracking_ang_vel": "0.5 -> 0.6",
+      "rewards.scales.base_height": "-1.0 -> -1.2",
+      "rewards.scales.feet_air_time": "1.0 -> 0.5"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；后期 smoothness 不崩溃；mean_episode_length > 800、mean_reward > 8；yaw 跟踪改善",
+    "actual_effect": "PARTIAL: 训练停止于约 3301 轮；model_3300 指标 episode=994.14、reward=22.58、smoothness=-0.0590；play 135 episodes，tracking_lin_vel=0.9489、tracking_ang_vel=0.4786；已导出"
+  },
+  {
+    "timestamp": "2026-09-06T21:40:54",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V5",
+    "diagnosis": "V4 在 3300 轮已取得稳定高指标并导出；新一轮降低速度课程上限，观察训练稳定性与 sim2sim 表现",
+    "changes": {
+      "commands.max_curriculum": "3.0 -> 1.5"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；避免后期退化；mean_episode_length > 900、mean_reward > 15；yaw/线速度跟踪保持稳定",
+    "actual_effect": "PARTIAL: 训练停止于约 6061 轮；model_6060 末 mean_episode_length=1000.82、mean_reward=24.72；play 121 episodes，tracking_lin_vel=0.8927、tracking_ang_vel=0.4684；已导出"
+  },
+  {
+    "timestamp": "2026-09-07T12:21:52",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep07_12-22-21_round11_after_v5",
+    "diagnosis": "V5 已导出且上一轮指标稳定；新一轮单独减小竖直速度惩罚，观察弹跳与稳定性的变化",
+    "changes": {
+      "rewards.scales.lin_vel_z": "-2.3 -> -1.8"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；mean_episode_length > 900，mean_reward > 15；lin_vel_z 惩罚不过度且不出现明显弹跳",
+    "actual_effect": "PARTIAL: 训练停止于约 2461 轮；model_2460 末 mean_episode_length=992.43、mean_reward=24.01、tracking_lin_vel=1.0876、tracking_ang_vel=0.4476；play 117 episodes，tracking_lin_vel=0.9354、tracking_ang_vel=0.4849；已导出"
+  },
+  {
+    "timestamp": "2026-09-07T16:27:00",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep07_16-28-20_round12_repeat",
+    "diagnosis": "重新开启 Go1 新一轮；当前配置与 V5 相同，从零复现稳定性",
+    "changes": {
+      "param1": "无参数变化；不加载 checkpoint；新建独立 run"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；mean_episode_length > 900、mean_reward > 15；无 OOM/NaN",
+    "actual_effect": "PARTIAL: 训练停止于约 1601 轮；model_1600 末 mean_episode_length=997.69、mean_reward=20.81；play 117 episodes，tracking_lin_vel=0.9050、tracking_ang_vel=0.4436；已导出"
+  },
+  {
+    "timestamp": "2026-09-07T19:37:10",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep07_19-38-38_round13",
+    "diagnosis": "新一轮 Go1：根据当前配置调整竖直速度/角速度/高度惩罚、动作变化惩罚和足端离地奖励",
+    "changes": {
+      "rewards.scales.lin_vel_z": "-1.8 -> -1.6",
+      "rewards.scales.ang_vel_xy": "-0.1 -> -0.03",
+      "rewards.scales.base_height": "-1.2 -> -1.0",
+      "rewards.scales.action_rate": "-0.01 -> -0.02",
+      "rewards.scales.feet_air_time": "0.5 -> 1.0",
+      "rewards.clearance_height_target": "-0.20 -> -0.18"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；mean_episode_length > 900、mean_reward > 15；平滑性和姿态稳定不出现后期退化",
+    "actual_effect": "PARTIAL: 训练停止于约 1841 轮；model_1840 末 mean_episode_length=1002.00、mean_reward=22.83、tracking_lin_vel=1.0573、tracking_ang_vel=0.4375、smoothness=-0.0581；play 118 episodes，tracking_lin_vel=0.9031、tracking_ang_vel=0.4554；已导出"
+  },
+  {
+    "timestamp": "2026-09-07T22:52:09",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep07_22-52-37_round14",
+    "diagnosis": "新一轮 Go1：降低竖直速度惩罚并增强横滚/俯仰角速度惩罚，观察姿态稳定性",
+    "changes": {
+      "rewards.scales.lin_vel_z": "-1.6 -> -1.2",
+      "rewards.scales.ang_vel_xy": "-0.03 -> -0.08"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；mean_episode_length > 900、mean_reward > 15；姿态角速度稳定且不出现弹跳",
+    "actual_effect": "FAILED: 训练约 161 轮早期退化；末 episode=293.97、reward=1.08；model_160 play 1284 episodes，tracking_lin_vel=0.5022、tracking_ang_vel=0.1732；已导出但不建议部署"
+  },
+  {
+    "timestamp": "2026-09-08T10:47:43",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round15",
+    "diagnosis": "新一轮 Go1：提高课程速度上限并恢复更强竖直速度惩罚，针对 round14 的早期退化复测",
+    "changes": {
+      "commands.max_curriculum": "1.5 -> 2.0",
+      "rewards.scales.lin_vel_z": "-1.2 -> -1.8"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；mean_episode_length > 900、mean_reward > 15；避免 round14 的早期退化",
+    "actual_effect": "FAILED: 约 40 轮早期退化；末 episode=25.88、reward=-0.66；model_40 play 1800 episodes，tracking_lin_vel=0.5526、tracking_ang_vel=0.3562；已导出但不建议部署"
+  },
+  {
+    "timestamp": "2026-09-08T11:16:55",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep08_11-18-08_round16",
+    "diagnosis": "重新开启 round16；当前配置已回调课程上限和竖直速度惩罚，feet_air_time 保持 0.5",
+    "changes": {
+      "commands.max_curriculum": "1.5 -> 2.0",
+      "rewards.scales.lin_vel_z": "-1.8 -> -2.2"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；mean_episode_length > 900、mean_reward > 15；避免 round15 早期退化",
+    "actual_effect": "PARTIAL: 初期退化后恢复，训练停止于约 3101 轮；model_3100 末 mean_episode_length=997.87、mean_reward=24.38、tracking_lin_vel=1.0885、tracking_ang_vel=0.4532；play 127 episodes，tracking_lin_vel=0.9564、tracking_ang_vel=0.4696；已导出"
+  },
+  {
+    "timestamp": "2026-09-08T16:57:32",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep08_16-58-01_round17",
+    "diagnosis": "新一轮 Go1：增强机身角速度与足端净空约束，提高 feet_air_time，并提高目标站高",
+    "changes": {
+      "rewards.scales.ang_vel_xy": "-0.08 -> -0.2",
+      "rewards.scales.foot_clearance": "-0.01 -> -0.02",
+      "rewards.scales.feet_air_time": "0.5 -> 1.0",
+      "rewards.base_height_target": "0.30 -> 0.32"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；初期退化后恢复；mean_episode_length > 900、mean_reward > 15；姿态和抬脚表现改善",
+    "actual_effect": "PARTIAL: 初期退化后恢复，训练停止于约 1781 轮；model_1780 末 mean_episode_length=885.80、mean_reward=10.17、tracking_lin_vel=0.9944、tracking_ang_vel=0.0778；play 80 episodes，tracking_lin_vel=0.8956、tracking_ang_vel=0.2914；已导出"
+  },
+  {
+    "timestamp": "2026-09-08T20:34:49",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep08_20-35-20_round18",
+    "diagnosis": "新一轮 Go1：提高线/角速度跟踪与目标站高，重新平衡角速度、足端净空和动作变化惩罚",
+    "changes": {
+      "rewards.scales.tracking_lin_vel": "1.2 -> 1.5",
+      "rewards.scales.tracking_ang_vel": "0.6 -> 0.8",
+      "rewards.scales.ang_vel_xy": "-0.2 -> -0.05",
+      "rewards.scales.foot_clearance": "-0.02 -> -0.05",
+      "rewards.scales.action_rate": "-0.02 -> -0.1",
+      "rewards.base_height_target": "0.32 -> 0.34"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；初期退化后恢复；mean_episode_length > 900、mean_reward > 15；跟踪能力和站高改善",
+    "actual_effect": "PARTIAL: round18 仅运行到约 101 轮后结束；末 mean_episode_length=235.29、mean_reward=0.19，未完成稳定性评估"
+  },
+  {
+    "timestamp": "2026-09-08T22:13:54",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V6",
+    "diagnosis": "重新开启 Go1 新一轮；当前配置与 round18 一致，从零复现",
+    "changes": {
+      "param1": "无参数变化；不加载 checkpoint；新建独立 run"
+    },
+    "expected_effect": "3072 env 下完成 8000 轮；初期退化后恢复，mean_episode_length > 900、mean_reward > 15；无 OOM/NaN",
+    "actual_effect": "SUCCESS: 完成 8000 轮；末 mean_episode_length=1002.00、mean_reward=32.29、tracking_lin_vel=1.3702、tracking_ang_vel=0.6625；play 101 episodes，tracking_lin_vel=1.1916、tracking_ang_vel=0.6623；已导出"
+  },
+  {
+    "timestamp": "2026-09-09T10:51:00",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round20_after_v6",
+    "diagnosis": "V6 已完成 8000 轮且指标优秀；新一轮提高线速度跟踪权重、调整姿态/角速度/碰撞/绊倒与站高目标",
+    "changes": {
+      "rewards.scales.tracking_lin_vel": "1.5 -> 2.0",
+      "rewards.scales.lin_vel_z": "-2.2 -> -2.0",
+      "rewards.scales.ang_vel_xy": "-0.05 -> -0.1",
+      "rewards.scales.orientation": "-0.3 -> -0.1",
+      "rewards.scales.collision": "-0.0 -> -0.1",
+      "rewards.scales.feet_stumble": "-0.0 -> -0.1",
+      "rewards.base_height_target": "0.34 -> 0.36",
+      "rewards.clearance_height_target": "-0.18 -> -0.16"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；初期退化后恢复；mean_episode_length > 900、mean_reward > 25；姿态和高速跟踪改善",
+    "actual_effect": "FAILED/RETRY: feet_stumble 兼容别名已修复；3072 env 首轮 PPO Sinkhorn 更新仍 CUDA OOM，已尝试 expandable_segments 无效"
+  },
+  {
+    "timestamp": "2026-09-09T10:57:08",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/V7",
+    "diagnosis": "V6 新配置在 3072 env 首轮 PPO 更新 OOM；保留并行规模，拆小 mini-batch",
+    "changes": {
+      "algorithm.num_mini_batches": "4 -> 16"
+    },
+    "expected_effect": "3072 env 下能完成 PPO 更新且无 CUDA OOM；后续观察策略稳定性",
+    "actual_effect": "PARTIAL: 3072 env + mini_batches=16 稳定运行至约 5641 轮；model_5640 末 mean_episode_length=976.15、mean_reward=38.38、tracking_lin_vel=1.8399、tracking_ang_vel=0.6482；play 116 episodes，tracking_lin_vel=1.5786、tracking_ang_vel=0.6362；已导出"
+  },
+  {
+    "timestamp": "2026-09-09T21:31:04",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep09_21-31-39_round21_after_v7",
+    "diagnosis": "V7 已稳定运行到约 5641 轮并导出；新一轮沿用 V7 参数，从零复现稳定性",
+    "changes": {
+      "param1": "无环境奖励参数变化；algorithm.num_mini_batches 保持 16；不加载 V7 checkpoint"
+    },
+    "expected_effect": "3072 env 下继续稳定训练；mean_episode_length > 900、mean_reward > 30；无 OOM/NaN",
+    "actual_effect": "PARTIAL: round21 仅运行到约 21 轮且出现早期退化；末 episode=27.68、reward=-1.72、smoothness=-0.449，已结束并重新开启独立轮次"
+  },
+  {
+    "timestamp": "2026-09-09T21:36:44",
+    "checkpoint_step": null,
+    "run_dir": "rough_go1/*_round22_restart",
+    "diagnosis": "重新开启 round22；沿用 V7/round21 配置，从零独立复现",
+    "changes": {
+      "param1": "无参数变化；不加载 checkpoint；新建独立 run"
+    },
+    "expected_effect": "3072 env 下初期退化后恢复；mean_episode_length > 900、mean_reward > 30；无 OOM/NaN",
+    "actual_effect": "PARTIAL: round22 仅运行到约 5 轮后按用户要求结束；未进入稳定阶段"
+  },
+  {
+    "timestamp": "2026-09-09T21:39:44",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep09_21-40-22_round23_restart",
+    "diagnosis": "重新开启 round23；当前配置与 round22 一致，从零独立复现",
+    "changes": {
+      "param1": "无参数变化；不加载 checkpoint；新建独立 run"
+    },
+    "expected_effect": "3072 env 下初期退化后恢复；mean_episode_length > 900、mean_reward > 30；无 OOM/NaN",
+    "actual_effect": "PARTIAL: round23 仅运行到约 81 轮后结束；末 episode=63.34、reward=0.34，未进入稳定阶段；本次按用户要求只结束训练，不导出"
+  },
+  {
+    "timestamp": "2026-09-09T22:01:49",
+    "checkpoint_step": null,
+    "run_dir": "legged_gym/logs/rough_go1/Sep09_22-02-32_round24",
+    "diagnosis": "新一轮 Go1：相对 V7 加强姿态/碰撞/绊倒约束，调整足端净空、腾空时间和目标站高",
+    "changes": {
+      "rewards.scales.ang_vel_xy": "-0.1 -> -0.2",
+      "rewards.scales.orientation": "-0.1 -> -0.2",
+      "rewards.scales.foot_clearance": "-0.05 -> -0.01",
+      "rewards.scales.smoothness": "-0.01 -> -0.02",
+      "rewards.scales.feet_air_time": "1.0 -> 0.5",
+      "rewards.scales.collision": "-0.1 -> -0.4",
+      "rewards.scales.feet_stumble": "-0.1 -> -0.5",
+      "rewards.base_height_target": "0.36 -> 0.32"
+    },
+    "expected_effect": "3072 env 下无 OOM/NaN；初期退化后恢复；mean_episode_length > 900、mean_reward > 30；碰撞和姿态更稳定",
+    "actual_effect": "SUCCESS: 完成 8000 轮；末 mean_episode_length=1486.75、mean_reward=54.23、tracking_lin_vel=1.8002、tracking_ang_vel=0.6514；play 91 episodes，tracking_lin_vel=1.6110、tracking_ang_vel=0.6624；已导出"
+  },
+  {
+    "timestamp": "2026-09-13T02:44:52",
+    "checkpoint_step": null,
+    "run_dir": "",
+    "diagnosis": "LgDog1 首版配置照抄 go1 导致出生即穿地：calf=-1.5 超 URDF 限位 ±0.7 一倍多，出生高度 0.15 比零位站高 0.28 还低 13 cm，足底出生瞬间在地面以下（AGENT.md 六-4「出生就倒先查环境」的环境成因）",
+    "changes": {
+      "init_state.pos[2]": "0.15 -> 0.28",
+      "init_state.default_joint_angles.*_calf_joint": "-1.5 -> 0.0",
+      "init_state.default_joint_angles.*_thigh_joint": "0.6 -> 0.0"
+    },
+    "expected_effect": "出生落地无穿模冲量、关节不顶限位；Isaac 实测静置 z=0.2664 m 稳定（与 MuJoCo 0.2665 一致）；mean_episode_length 不再因出生姿态崩掉",
+    "actual_effect": null
+  },
+  {
+    "timestamp": "2026-09-13T02:44:58",
+    "checkpoint_step": null,
+    "run_dir": "",
+    "diagnosis": "base_height_target 0.32 只比最伸站姿(calf=+0.7 时 0.339 m)低 2 cm，而实测站高只有 0.267 m → rew_base_height 长期为负，机器人被奖励推着往上顶（对应 AGENT.md 三-3「rew_base_height 持续负」）",
+    "changes": {
+      "rewards.base_height_target": "0.32 -> 0.27"
+    },
+    "expected_effect": "rew_base_height 收敛到 ≈0（> -0.01），不再出现持续负值",
+    "actual_effect": null
+  },
+  {
+    "timestamp": "2026-09-13T02:44:58",
+    "checkpoint_step": null,
+    "run_dir": "",
+    "diagnosis": "URDF 关节限位未反映实机：calf 有 1:2 减速比，且电机速度原按 48V 给（实机 24V）。力矩与速度是两条独立换算链",
+    "changes": {
+      "urdf.*_calf_joint.limit.effort": "10 -> 20",
+      "urdf.*_calf_joint.limit.velocity": "37.7 -> 18.85(48V占位值) -> 9.425(24V)",
+      "urdf.*_hip_joint.limit.velocity": "37.7 -> 18.85",
+      "urdf.*_thigh_joint.limit.velocity": "37.7 -> 18.85"
+    },
+    "expected_effect": "Isaac torque_limits=[10,10,20]×4、dof_vel_limits=[18.85,18.85,9.425]×4 与实机一致；因果链：电压→转速(÷2，力矩不变)、减速比→力矩×2/转速÷2",
+    "actual_effect": null
+  },
+  {
+    "timestamp": "2026-09-13T02:44:58",
+    "checkpoint_step": null,
+    "run_dir": "",
+    "diagnosis": "URDF 里没有名字含 foot 的 body，legged_gym 的 foot_name 子串匹配落空 → feet_air_time/feet_stumble/foot_clearance/feet_contact_forces 四个奖励静默变 0；且小腿网格碰撞被 PhysX 膨胀约 8.6mm，把 12mm 足端球整个罩住，接触力 100% 落在小腿上（实测足端接触力恒为 0 N）",
+    "changes": {
+      "urdf": "删除 4 条小腿的 <collision> 网格(保留 visual)",
+      "param2": "球碰撞 r=0.012)",
+      "envs/LgDog1": "foot_name 保持 'foot'"
+    },
+    "expected_effect": "feet_indices=4 个；足端承受 100% 地面反力、小腿归零；rew_feet_air_time 不再恒为 0；MuJoCo 接点数 8->4（每脚一个球接触）",
+    "actual_effect": null
+  }
+]

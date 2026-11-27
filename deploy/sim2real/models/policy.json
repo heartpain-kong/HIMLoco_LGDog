@@ -1,0 +1,53 @@
+{
+  "weight_fingerprint": "a13b6ff17f79",
+  "control_contract": {
+    "decimation": 4,
+    "control_freq_hz": 50.0,
+    "control_dt_ms": 20.0,
+    "obs_history_len": 6,
+    "obs_history_span_ms": 100.0,
+    "kp": 30.0,
+    "kd": 0.8,
+    "action_scale": 0.25,
+    "note": "这份策略训练时的契约（decimation=4 → 50Hz；kd=0.8；action_scale=0.25）。★ 契约跟着策略走：main.py 会自动按这里应用，不必手打参数，也不会被别的 run 的默认值带偏。",
+    "default_dof_pos": [
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5
+    ],
+    "default_dof_pos_note": "训练于 2026-09-26，当时默认站姿还是 (0,-0.4,+0.5)。★ 2026-10-02 起新训练线改成了 (0,-0.20,+0.10)，但这份策略必须用老站姿（它决定了 obs[9:21] 的零点与站立目标）—— 所以站姿也是契约项，main.py 会按这里覆盖 spec 默认值。",
+    "obs_one_step": 45,
+    "obs_one_step_note": "45 = 旧布局（cmd/omega/pg/q/dq/act，无身高指令通道）。★ 2026-10-01 起训练侧新增身高指令通道 → 单帧 46 维、总计 276，这份策略是那之前训的，必须用 45 维布局；main.py/PolicyRunner 会按这里切换。"
+  },
+  "source_file": "legged_gym/logs/flat_LgDog1/exported/policies/policy_auto_4000.pt",
+  "exported_from": "V19 训练轮，iteration 11601",
+  "file_size": 996598,
+  "validated": {
+    "recording": "legged_gym/legged_gym/scripts/recorded_io/sim2sim_0927_034104.npz",
+    "started": "2026-09-27 03:40:52",
+    "steps": 30000,
+    "note": "policy=policy_auto_4000.pt wfp=a13b6ff17f79 scene=scene.xml frame_order=newest remap=swap kp=30.0 kd=0.8 action_scale=0.25 clamp_vel=True(上限18.85/18.85/9.425) match_isaac_dofs=False uniform_passives=F",
+    "attitude": [
+      "长度 30000 控制步 (600.0s), 统计段 t≥2.0s 且翻倒前 共 29900 步",
+      "✅ 全程未翻倒",
+      "pitch 前高后低: 均值 +7.10°  中位 +7.10°  p5 +5.53°  p95 +8.76°  std 1.00°",
+      "机身高度 z    : 均值 0.318 m  中位 0.330 m"
+    ]
+  },
+  "note": "★ 不要用文件 md5 判断是不是同一份权重：torch.jit 每次序列化都会改 zip 里的 serialization_id 与自动生成的源码条目，文件 md5 会变、权重不变。所有地方一律用 weight_fingerprint。",
+  "source_checkpoint": "legged_gym/logs/flat_LgDog1/V16_t/model_11601.pt（iteration 11601 的原始训练 checkpoint；2026-09-27 核对：导出文件里的 14 个张量【全部】能在该 checkpoint 的 model_state_dict 里按『张量字节哈希+形状』找到，多出的 16 个是 critic/训练专用参数 —— 即导出确系该 checkpoint 的 actor+HIM 估计器，来源确认）",
+  "verified_on": "2026-09-27",
+  "sync_note": "本目录的 policy.pt 是当前上栈的策略；历史版本按指纹留在 models/policy_<指纹>.pt。换策略请用 tools/adopt_policy.py，别手敲 cp（会被指纹闸门拦住）。",
+  "adopted_on": "2026-09-27 03:43:13",
+  "adopted_by": "tools/adopt_policy.py",
+  "previous_fingerprint": "fdf3053d8b29"
+}

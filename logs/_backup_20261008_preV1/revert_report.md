@@ -1,0 +1,134 @@
+# V1 回退改动清单（2026-10-08 15:15:44）
+
+权威来源: legged_gym/logs/_archive/V1/config_snapshot.json
+
+- `asset.foot_name`
+  - 旧: `foot_name = "foot"`
+  - 新: `foot_name = 'foot'`
+- `asset.name`
+  - 旧: `name = "LgDog1"`
+  - 新: `name = 'LgDog1'`
+- `asset.penalize_contacts_on`
+  - 旧: `penalize_contacts_on = ["thigh", "calf", "base"]`
+  - 新: `penalize_contacts_on = ['thigh', 'calf', 'base']`
+- `asset.terminate_after_contacts_on`
+  - 旧: `terminate_after_contacts_on = ["base"]`
+  - 新: `terminate_after_contacts_on = ['base']`
+- `commands.max_curriculum`
+  - 旧: `max_curriculum = 1.`
+  - 新: `max_curriculum = 2.0`
+- `commands.num_commands`
+  - 旧: `num_commands = 5  # x vel, y vel, yaw vel, heading, height（2026-10-01 新增第 5 维=目标身高）`
+  - 新: `num_commands = 4  # x vel, y vel, yaw vel, heading, height（2026-10-01 新增第 5 维=目标身高）`
+- `commands.ranges.ang_vel_yaw`
+  - 旧: `ang_vel_yaw = [-1.0, 1.0]`
+  - 新: `ang_vel_yaw = [-3.5, 3.5]`
+- `commands.ranges.lin_vel_x`
+  - 旧: `lin_vel_x = [-1.4, 1.4] # min max [m/s] — 回收至Gen4水平，4.5对0.24m腿过高`
+  - 新: `lin_vel_x = [-1.0, 1.0] # min max [m/s] — 回收至Gen4水平，4.5对0.24m腿过高`
+- `commands.resampling_time`
+  - 旧: `resampling_time = 7.`
+  - 新: `resampling_time = 3.0`
+- `control.decimation`
+  - 旧: `decimation = 4              # 控制频率设置 物理引擎 dt = 0.005 (200Hz) -> 控制频率 = 200 / 2 = 100Hz`
+  - 新: `decimation = 2              # 控制频率设置 物理引擎 dt = 0.005 (200Hz) -> 控制频率 = 200 / 2 = 100Hz`
+- `domain_rand.com_displacement_range`
+  - 旧: `com_displacement_range = [-0.08, 0.08]   # base_link 质心三轴偏移 [m]`
+  - 新: `com_displacement_range = [-0.2, 0.2]   # base_link 质心三轴偏移 [m]`
+- `domain_rand.friction_range`
+  - 旧: `friction_range = [0.2, 1.5]    # 摩擦系数（标称 1.0）：0.2≈冰面、1.25≈橡胶`
+  - 新: `friction_range = [0.3, 1.5]    # 摩擦系数（标称 1.0）：0.2≈冰面、1.25≈橡胶`
+- `domain_rand.kd_range`
+  - 旧: `kd_range = [0.9, 1.1]           # ±10% 阻尼误差`
+  - 新: `kd_range = [0.8, 1.2]           # ±10% 阻尼误差`
+- `domain_rand.kp_range`
+  - 旧: `kp_range = [0.9, 1.1]           # ±10% 刚度误差（装配/关节摩擦导致的等效刚度差异）`
+  - 新: `kp_range = [0.8, 1.2]           # ±10% 刚度误差（装配/关节摩擦导致的等效刚度差异）`
+- `domain_rand.link_mass_range`
+  - 旧: `link_mass_range = [0.9, 1.1]    # 除 base 外每个刚体独立乘一个随机系数`
+  - 新: `link_mass_range = [0.8, 1.2]    # 除 base 外每个刚体独立乘一个随机系数`
+- `domain_rand.motor_strength_range`
+  - 旧: `motor_strength_range = [0.9, 1.1]   # ±10% 力矩缩放，模拟电机个体差异/电池电压波动`
+  - 新: `motor_strength_range = [0.8, 1.2]   # ±10% 力矩缩放，模拟电机个体差异/电池电压波动`
+- `domain_rand.payload_mass_range`
+  - 旧: `payload_mass_range = [-0.5, 1.5]    # 机身附加质量 [kg]，叠加在 base_link 原质量 3.487 kg 上`
+  - 新: `payload_mass_range = [-0.75, 2.5]    # 机身附加质量 [kg]，叠加在 base_link 原质量 3.487 kg 上`
+- `domain_rand.randomize_link_mass`
+  - 旧: `randomize_link_mass = False`
+  - 新: `randomize_link_mass = True`
+- `env.episode_length_s`
+  - 旧: `episode_length_s = 40 # 每个回合 20 秒，超时重置`
+  - 新: `episode_length_s = 20 # 每个回合 20 秒，超时重置`
+- `env.num_one_step_observations`
+  - 旧: `num_one_step_observations = 46`
+  - 新: `num_one_step_observations = 45`
+- `env.num_one_step_privileged_obs`
+  - 旧: `num_one_step_privileged_obs = 46 + 3 + 3 + 187`
+  - 新: `num_one_step_privileged_obs = 45 + 3 + 3 + 187`
+- `rewards.clearance_height_target`
+  - 旧: `clearance_height_target = -0.13`
+  - 新: `clearance_height_target = -0.2`
+- `rewards.soft_dof_pos_limit`
+  - 旧: `soft_dof_pos_limit = 0.85 # 关节位置软限位比例（目标夹取与顶限位罚共用这个基准）`
+  - 新: `soft_dof_pos_limit = 0.9 # 关节位置软限位比例（目标夹取与顶限位罚共用这个基准）`
+- `rewards.soft_torque_limit`
+  - 旧: `soft_torque_limit = 0.8  # 关节力矩软限位比例，超过后开始惩罚。`
+  - 新: `soft_torque_limit = 1.0  # 关节力矩软限位比例，超过后开始惩罚。`
+- `terrain.max_init_terrain_level`
+  - 旧: `max_init_terrain_level = 0`
+  - 新: `max_init_terrain_level = 5`
+- `terrain.terrain_proportions`
+  - 旧: `terrain_proportions = [0.08, 0.10, 0.06, 0.10, 0.16, 0.16, 0.34]   # 2026-09-29 平地 0.20→0.34`
+  - 新: `terrain_proportions = [0.1, 0.2, 0.3, 0.3, 0.1]   # 2026-09-29 平地 0.20→0.34`
+- `init_state.default_joint_angles`
+  - 旧: `'FL_hip_joint': 0.0,  'FL_thigh_joint': -0.20, 'FL_calf_joint': 0.10,`
+  - 新: `'FL_hip_joint': 0.0,  'FL_thigh_joint': -0.4, 'FL_calf_joint': 0.5,`
+- `init_state.default_joint_angles`
+  - 旧: `'FR_hip_joint': 0.0,  'FR_thigh_joint': -0.20, 'FR_calf_joint': 0.10,`
+  - 新: `'FR_hip_joint': 0.0,  'FR_thigh_joint': -0.4, 'FR_calf_joint': 0.5,`
+- `init_state.default_joint_angles`
+  - 旧: `'RL_hip_joint': 0.0,  'RL_thigh_joint': -0.20, 'RL_calf_joint': 0.10,`
+  - 新: `'RL_hip_joint': 0.0,  'RL_thigh_joint': -0.4, 'RL_calf_joint': 0.5,`
+- `init_state.default_joint_angles`
+  - 旧: `'RR_hip_joint': 0.0,  'RR_thigh_joint': -0.20, 'RR_calf_joint': 0.10,`
+  - 新: `'RR_hip_joint': 0.0,  'RR_thigh_joint': -0.4, 'RR_calf_joint': 0.5,`
+- `rewards.scales`
+  - 旧: `(class scales 整块重写)`
+  - 新: `21 项 V1 奖励`
+
+## 删除的奖励项（V1 没有）
+- termination = -0.5              # 非超时摔倒罚一次
+- tracking_lin_vel = 2.8          # 跟踪 vx/vy 指令，exp(−err²/0.22)
+- tracking_ang_vel = 2.0          # 跟踪 wz 指令，exp(−err²/0.6)（用户加倍，治 w 慢）
+- lin_vel_z = -2.4                # 罚竖直速度²（防弹跳）
+- ang_vel_xy = -0.8               # 罚横滚/俯仰角速度²（防晃）
+- orientation = -6.0              # 罚 roll/pitch²（水平姿态）：-4.0 → -6.0，治行走 pitch +9.17°（-4.0 时 9° 罚仅 -0.10/秒，压不过 tracking 收益）
+- dof_acc = -2e-06                # 罚关节加速度²（冲击）
+- joint_power = -2e-05            # 罚关节功率 |q̇|·|τ|（能耗）
+- base_height = -1.5              # 罚 (z−身高指令)×10)²，跟踪第 5 维身高指令
+- foot_clearance = -2.5           # 摆动相离地【地板】: 低于 3cm 才罚（-4.0→-2.5，并加移动门控）
+- swing_clearance_terrain = 0.0   # 过障碍净空奖励（已关闭）：净空改由 foot_clearance(relu_swing) 承担
+- action_rate = -0.02             # 罚动作差分²（抖）
+- smoothness = -0.08              # 罚二阶动作差分²（高频抖振）
+- feet_air_time = 1               # 奖励腾空时长（>0.2s 的部分）【用户 2026-10-05: 保留不动】
+- step_length = 0.0               # （关闭）奖励步幅——用户指令『把步幅惩罚删了 只保留步频』
+- step_freq = 0.25                # 步频奖励(稠密): f=1/(距上次着地时间) 贴近 f* 得分
+- swing_ceiling = -2.0            # 抬腿天花板: 摆动相离地超过 clearance_ceiling(0.14m) 就罚
+- stance_slip = -1.5              # 罚支撑足擦地打滑（抬腿要换成地面距离，别空转）
+- yaw_hold = -0.8                 # 罚『没让转却自转』|ω_z|（门控 |cmd_yaw|<0.1；-0.5→-0.8）
+- gait_symmetry = -1.5            # 【V40 新】左右摆动时长不对称：着陆时 |本次−镜像足上次|
+- axis_purity = -1.0              # 【V40 新】轴向纯度：纯前进/纯侧移时罚未指令轴速度
+- straight_hold = -0.3            # 【V40 新】直行段积分式朝向保持 |wrap(yaw−参考)|
+- collision = -0.5                # 罚 base/thigh/calf 触地
+- feet_stumble = -0.2             # 罚足端撞竖直面（绊）
+- stand_still = -4                # 零/慢 xy 且 yaw≈0 时锚回默认站姿（原地转弯不罚）
+- torques = -0.0                  # （关闭）
+- dof_vel = -0.0                  # （关闭）
+- dof_pos_limits = -0.5           # 【V41 开】罚关节顶进软限位外沿（calf 顶限位是真机 BRAKE 的直接来源）
+- dof_vel_limits = -0.0           # （关闭）
+- default_pos_linear = -0.05      # 常驻姿态锚 Σ|q−q_default|（转弯时髋部释放）
+- diagonal_sync = -0.1            # 促 trot 对角同步
+- hip_mirror_symmetry = -0.1      # 左右髋镜像 fl≈−fr；直行满额、转弯释放（含原地）
+- turn_splay = 1.5                # 转弯-外张奖励：意图 x【实际执行率】x 髋外张(封顶0.35rad)（3.0→1.5）
+- hip_splay_straight = -1.0       # 直行-髋外张罚 Σrelu(|hip|−0.06)²，转弯门控（V26 形态）
+- torque_limits = -0.0            # （关闭）

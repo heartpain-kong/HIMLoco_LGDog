@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 训练产物：checkpoint / TensorBoard / 策略 IO 录制（体积太大，不进仓库）
+*.pt
+!legged_gym/logs/flat_LgDog1/exported/policies/policy.pt
+!legged_gym/logs/flat_LgDog1/exported/policies/policy_V51_18600.pt
+!deploy/sim2real/models/*.pt
+!deploy/sim2real/V6_h/policy.pt
+events.out.tfevents.*
+*.npz
+*.pkl
+
+# 部署虚拟环境
+.venv/
+deploy/sim2real/logs/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 本地出片临时文件
+*.mp4
+!media/*.mp4

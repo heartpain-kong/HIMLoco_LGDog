@@ -1,0 +1,9 @@
+# 运行产物
+logs/
+*.npz
+MUJOCO_LOG.TXT
+# 环境
+.venv/
+dist/
+__pycache__/
+*.pyc

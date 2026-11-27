@@ -1,0 +1,43 @@
+{
+  "weight_fingerprint": "24ee17af3954",
+  "name": "Oct14_10-28-45_LgDog1_himloco @iteration 18600（收尾链导出）",
+  "source_run": "LgRobotDog/legged_gym/logs/flat_LgDog1/Oct14_10-28-45_LgDog1_himloco",
+  "source_checkpoint": "model_18600.pt",
+  "source_file": "exported/policies/policy_V51_18600.pt",
+  "file_size": 996662,
+  "md5_file": "16623e6eb3a17e7a7c1ae29aa6d4b2ec",
+  "md5_note": "文件 md5 只用于比对\"是不是同一个文件\"；判断\"是不是同一份权重\"一律用 weight_fingerprint",
+  "io": "270 维（45 单帧 × 6 历史）→ 12 维动作",
+  "control_contract": {
+    "obs_one_step": 45,
+    "obs_history_len": 6,
+    "obs_history_span_ms": 100.0,
+    "decimation": 4,
+    "control_freq_hz": 50.0,
+    "kp": 40.0,
+    "kd": 1.2,
+    "action_scale": 0.25,
+    "clip": 100.0,
+    "obs_scales": {
+      "ang_vel": 0.25,
+      "dof_pos": 1.0,
+      "dof_vel": 0.05,
+      "lin_vel": 2.0
+    },
+    "default_dof_pos": [
+      0.0,
+      0.0,
+      0.2,
+      0.0,
+      0.0,
+      0.2,
+      0.0,
+      0.0,
+      0.2,
+      0.0,
+      0.0,
+      0.2
+    ]
+  },
+  "sidecar_note": "本文件由 tools/make_policy_sidecar.py 从该 run 的 config_snapshot.json 自动生成；没有它，部署侧 check_alignment.py / main.py 会退回 spec.py 的模块默认契约，对 45 维/kp40 的策略会误报「KP 不一致」。"
+}

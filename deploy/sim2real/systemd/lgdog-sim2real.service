@@ -1,0 +1,46 @@
+# LgDog1 sim2real 开机自启单元（可选）
+#
+# ★ 默认【不推荐】用 systemd 自启四足控制器，原因：
+#     systemd 下没有终端 → 拿不到"按回车确认"的人工闸口，键盘兜底也失效；
+#     只剩手柄可用。第一次上电、每次改完代码，都应该在终端里手动起，
+#     看着日志起立，确认没问题再考虑自启。
+#     所以这里写 Restart=no：崩了就停下，别自动把机器人再拉起来一次。
+#
+# 用法：
+#     sudo cp systemd/lgdog-sim2real.service /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     # 按实际路径改 WorkingDirectory / ExecStart / User
+#     sudo systemctl enable --now lgdog-sim2real
+#     journalctl -u lgdog-sim2real -f
+#
+# 需要人为确认的场合请改用终端手动启动： ./run.sh
+
+[Unit]
+Description=LgDog1 sim2real policy controller (12x RS-02 via dm02 board)
+Documentation=file:/opt/lgdog/sim2real/PORTING.md
+After=network.target
+# 下位机的 CDC 串口是 USB 设备，等 udev 起来
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service
+
+[Service]
+Type=simple
+User=lgdog
+Group=dialout
+SupplementaryGroups=input
+WorkingDirectory=/opt/lgdog/sim2real
+# --yes 跳过回车闸口（systemd 没有 stdin）；死人开关仍然由手柄负责
+ExecStart=/opt/lgdog/sim2real/run.sh --config /opt/lgdog/sim2real/config.yaml --yes
+Environment=LGDOG_NO_TWEAK=1
+# 日志：程序自己写 logs/，stdout 交给 journal
+StandardOutput=journal
+StandardError=journal
+# ★ 绝不自启重试：机器人控制器崩溃后自动重启等于自动再摔一次
+Restart=no
+# 别让 OOM killer 半夜把控制进程干掉
+OOMScoreAdjust=-500
+# 收尾要留时间发阻尼刹车
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

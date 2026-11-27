@@ -1,0 +1,136 @@
+# ============================================================================
+# LgDog1 真机硬件映射表（电机 CAN 总线 / ID / 方向 / 减速比 / 零位）
+#
+# ★★★ 这张表里的值【默认全是未经验证的猜测】。上真机前必须逐项确认，
+#      然后把 verified 改成 true。在 verified=false 时，程序会拒绝进入
+#      策略控制（只允许做过零位标定/单关节测试这类低速动作）。
+#
+# ★★ 这张表必须与【下位机固件】里的 LGD_JOINT_TO_MOTOR 完全一致
+#     （dm02/User_File/task/host_link.cpp）。两处不一致 → 关节和电机错位，
+#     PC 一发指令就是乱套。改一边必须改另一边。
+#
+# 实际拓扑（两条 CAN，每条挂 2 条腿 / 6 个电机）：
+#     PC(N100) ──Type-C──> 下位机(dm02, STM32H7) ──┬─ FDCAN1 ─> 6 个电机
+#                                                  └─ FDCAN2 ─> 6 个电机
+#     下位机同时把 IMU（欧拉角 + 陀螺仪角速度）和 12 个电机状态回传给 PC。
+#     所以 PC 侧【不直接碰 CAN】，指令走 host_link 协议中转。
+#
+# 关节顺序固定为 spec.JOINT_LABELS：
+#     FL_hip, FL_thigh, FL_calf, FR_hip, FR_thigh, FR_calf,
+#     RL_hip, RL_thigh, RL_calf, RR_hip, RR_thigh, RR_calf
+#   —— 这是【策略的关节顺序】（Isaac 序），不是电机接线顺序。
+#
+# ★★ PD 增益也要按 gear_ratio 换算（2026-10-02 加）★★
+#   MIT 模式的 Kp/Kd 是在【电机自己的编码器坐标系】里生效的，而策略的 Kp/Kd 是
+#   【关节侧】的（legged_gym 在 dof 上算 tau = kp*(q*-q) - kd*dq）。两者差一个 n²：
+#         Kp_电机 = Kp_关节 / gear_ratio²        Kd_电机 = Kd_关节 / gear_ratio²
+#   小腿 1:2 → 除以 4（30 → 7.5，0.8 → 0.2）；hip/thigh 无额外减速 → 不变。
+#   推导与台架核实方法见 rl/dog/小腿减速比_kp_kd_计算.md。
+#   backends/host_link_backend.py 会自动做这个换算（gain_correction: true）。
+#
+# ★★ 2026-10-08 决定：部署侧【不做】这个换算（保持 false）★★
+#   依据：现场树 ~/rl/LgRobot/sim2real 的 hardware_map.yaml 是 verified: true 的
+#   【实机标定表】，它全程按关节侧原值下发（calf Kp=30 / Kd=1.2），机器能正常走；
+#   本推导的"MIT 的 Kp 定义在电机输出侧"这一前提尚未在台架上被证实。
+#   ⇒ 两台栈保持一致：都不换算。要 A/B 验证时把下面改成 true 即可（改完跑
+#      ./selftest.sh 与 main.py --check，看 [8/9] 段打印的电机侧增益）。
+#   台架判定法（不需要跑策略）：稳住默认站姿读 calf 静态误差 ——
+#     前腿 ≈4.3° / 后腿 ≈13.3° ⇒ 该除；前腿 ≈1.1° / 后腿 ≈3.3° ⇒ 不该除。
+#   推导全文：rl/dog/小腿减速比_kp_kd_计算.md
+gain_correction: false
+
+# 换算公式：
+#     下发： motor = sign * (sim * gear_ratio) + zero_offset
+#     回读： sim   = (motor - zero_offset) / sign / gear_ratio
+#     速度： motor_vel = sign * sim_vel * gear_ratio
+#
+# ★ 关于 gear_ratio：URDF 里 calf 的速度上限是 9.425 rad/s，而 hip/thigh 是 18.85
+#   —— 正好一半。这说明【小腿有一级 2:1 减速】，hip/thigh 是直驱。
+#   电机回读的是【电机轴】角度，所以小腿的 gear_ratio 必须是 2.0。
+#   ⚠️ 这条是从 URDF 推出来的，不是实测的，上电前请手动盘一下确认
+#      （标定工具：python tools/calibrate.py gear --joint FL_calf）
+#
+# 标定顺序（工具：deploy/sim2real/tools/calibrate.py）：
+#   1) check     纯静态检查，不连硬件
+#   2) scan      扫总线 CAN ID，比对本表
+#   3) read      读 12 个关节当前角度/温度
+#   4) wiggle    ★ 第一次动电机：单关节 ±0.03 rad，确认"发哪个、动哪个"
+#   5) direction 判定 sign
+#   6) gear      判定 gear_ratio（重点确认小腿那条）
+#   7) offsets   摆成零位姿态，直接打印可粘贴的 zero_offset 表
+# ============================================================================
+
+verified: false          # ★ 逐项确认后再改成 true
+
+# ============================================================================
+# ★★ 下位机固件对每个电机的软限位（motor_task.cpp:338-354 的常量，单位：度）
+#
+# 【为什么这张表重要】这些值不是我们定的，是固件里写死的。桥接模式下它们
+# 【依然生效】：上位机发的目标（电机侧）一旦越出这个窗口，固件会把它夹到边界，
+# 并置 err_flags bit4（心跳时不会自动清，只有下位机复位才清）。
+#
+# 所以这是一个【与我们的零点假设相互独立】的参考系：
+#     URDF 的关节行程是物理事实，电机的绝对角度是电机自己的事实，
+#     两者通过 sign / gear_ratio / zero_offset 建立联系 —— 联系对不对，
+#     可以用"行程映射到电机侧后是否落在固件窗口内"来交叉验证。
+#     `main.py --check` 会逐关节算给你看（见 [7/7] 段）。
+#
+# 【窗口形态】hip/thigh 是 ±90°（以关节零位为中心）；
+#   calf 是【单边】的 0..210° 或 −210..0°，且极性是【对角】成对的
+#   （FL_calf 与 RR_calf 同向、FR_calf 与 RL_calf 同向）。
+#   单边窗口意味着"calf 电机的零位在某个机械端点"而不是在关节零位 ——
+#   若真如此，calf 的 zero_offset 必须≈±105°(±1.833 rad)，才能把 ±0.7 rad 的
+#   关节行程摆到窗口中间；而当前表里 calf 的 zero_offset=0，与窗口直接矛盾。
+#
+# ⚠️ 反过来也要注意：窗口一致是【必要条件，不是充分条件】。
+#   对同一个单边窗口，sign=+1 配 off=−105° 和 sign=−1 配 off=−105° 都能"装进去"，
+#   但两者让关节转的方向相反。窗口只能查出自相矛盾，【定不了 sign 也定不了零点】——
+#   那必须靠机械参考（机械限位/水平仪/加计），见 PORTING.md 第 5 节。
+# ★ 2026-09-27：固件里的 12 个 Pos_min/Pos_max 软限位【已从固件中删除】。
+#   原因（来自用户说明）：桥接模式下它们只会①静默夹住上位机目标、②在实测位置越界时
+#   静默把前馈力矩置 0 —— 制造"PC 发的角度和电机到的角度对不上"的假象。
+#   所以下面这张表对【新固件】不再生效。保留它只为两件事：
+#     ① 遇到还跑着旧固件的板子：此时 err_flags bit4 仍会出现 → 上位机会提示"该刷固件了"
+#     ② 留一份记录：说明当初那个矛盾（calf 单边窗口 0..210°/−210..0°）是怎么解决的
+#
+#   ⚠️⚠️ 后果必须清楚：板侧现在只剩【心跳看门狗】一条兜底。
+#        行程保护全部落到上位机 —— 即 safety.SafetyMonitor 的【关节限位夹取】
+#        （`safety.clamp_joint_limits`，它把最终目标无条件夹进 URDF 限位）。
+#        而那一层是【零点依赖】的（见 PORTING.md 第 6 节）：
+#        零点偏 δ，保护边界也跟着偏 δ。**所以零点标定现在比之前更关键 —— 没有独立护栏了。**
+board_limits_active: false
+board_limits_deg:
+  FL_hip:   [-90, 90]
+  FL_thigh: [-90, 90]
+  FL_calf:  [-210, 0]
+  FR_hip:   [-90, 90]
+  FR_thigh: [-90, 90]
+  FR_calf:  [0, 210]
+  RL_hip:   [-90, 90]
+  RL_thigh: [-90, 90]
+  RL_calf:  [0, 210]
+  RR_hip:   [-90, 90]
+  RR_thigh: [-90, 90]
+  RR_calf:  [-210, 0]
+
+# RobStride RS-02（灵足 02）的 MIT 模式参数范围（与固件 MOTOR_LZ_02 对应）
+motor_model: "rs-02"
+mit_kp_range: [0.0, 500.0]
+mit_kd_range: [0.0, 5.0]
+
+# bus: 0 = FDCAN1, 1 = FDCAN2；can_id: 1..6（每条总线 6 个电机）
+joints:
+  # ---- FDCAN1：左前 + 右前 ----
+  FL_hip:    {bus: 0, can_id: 1, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  FL_thigh:  {bus: 0, can_id: 2, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  FL_calf:   {bus: 0, can_id: 3, sign: +1, gear_ratio: 2.0, zero_offset: 0.0}
+  FR_hip:    {bus: 0, can_id: 4, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  FR_thigh:  {bus: 0, can_id: 5, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  FR_calf:   {bus: 0, can_id: 6, sign: +1, gear_ratio: 2.0, zero_offset: 0.0}
+  # ---- FDCAN2：左后 + 右后 ----
+  RL_hip:    {bus: 1, can_id: 1, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  RL_thigh:  {bus: 1, can_id: 2, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  RL_calf:   {bus: 1, can_id: 3, sign: +1, gear_ratio: 2.0, zero_offset: 0.0}
+  RR_hip:    {bus: 1, can_id: 4, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  RR_thigh:  {bus: 1, can_id: 5, sign: +1, gear_ratio: 1.0, zero_offset: 0.0}
+  RR_calf:   {bus: 1, can_id: 6, sign: +1, gear_ratio: 2.0, zero_offset: 0.0}

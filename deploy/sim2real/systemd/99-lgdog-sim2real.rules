@@ -1,0 +1,16 @@
+# LgDog1 sim2real —— 下位机(STM32 USB CDC) 与手柄的权限/固定设备名
+# 安装： sudo cp systemd/99-lgdog-sim2real.rules /etc/udev/rules.d/
+#        sudo udevadm control --reload-rules && sudo udevadm trigger
+# （install.sh 会自动做，这里留一份方便手动/审计）
+
+# 下位机：STM32 虚拟串口 → 稳定别名 /dev/lgdog_board（重插/换口都不变）
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", SYMLINK+="lgdog_board", MODE="0660", GROUP="dialout"
+
+# 常见 USB-CAN 适配器（绕过下位机直连电机、单关节标定时用）
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", MODE="0660", GROUP="dialout"   # CH340
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e88", MODE="0660", GROUP="dialout"   # 达妙 DM-MC02
+SUBSYSTEM=="tty", ATTRS{idVendor}=="34b7", MODE="0660", GROUP="dialout"   # 灵足
+
+# 手柄：/dev/input/event* 默认 root:input 0660，把 input 组放开即可
+# （用户还得在 input 组里：sudo usermod -aG input $USER，然后注销重登）
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input"

@@ -1,0 +1,27 @@
+<mujoco model="LgDog1_scene">
+  <compiler
+    meshdir="/home/heartpain/rl/LgRobotDog/legged_gym/resources/robots/LgDog1/meshes"
+    balanceinertia="true"
+    discardvisual="false" />
+
+  <worldbody>
+    <light directional="true" castshadow="false" pos="0 0 5" dir="0 0 -1"/>
+    <geom name="ground" type="plane" size="50 50 0.1" rgba="0.8 0.8 0.8 1" />
+
+    <!-- 引入 LgDog1 机器人 -->
+    <include file="/home/heartpain/rl/LgRobotDog/legged_gym/resources/robots/LgDog1/urdf/LgDog1.urdf" />
+
+    <!-- 在 trunk 刚体上添加 site，供传感器挂载 -->
+    <site name="trunk_site" type="sphere" size="0.001" pos="0 0 0" />
+  </worldbody>
+
+  <sensor>
+  
+    <!-- IMU: 姿态四元数（frame 传感器，挂在 trunk 刚体上） -->
+    <framequat name="Body_Gyro" objtype="body" objname="trunk" />
+    <!-- IMU: 角速度 -->
+    <gyro name="Body_Gyro" objtype="body" objname="trunk" />
+    <!-- IMU: 线速度（世界坐标系下 trunk 的速度） -->
+    <framelinvel name="Body_Acc" objtype="body" objname="trunk" />
+  </sensor>
+</mujoco>

@@ -1,0 +1,272 @@
+# ============================================================================
+# LgDog1 sim2real 运行参数
+#
+# ★ 凡是"与训练接口相关"的值（kp/kd/action_scale/控制频率）都不在这里定义第二遍——
+#   它们来自 spec.py。本文件只放【硬件相关】和【安全/启动阈值】。
+#   policy.action_scale 在此留空表示"用 spec.ACTION_SCALE"，写值会覆盖（不推荐）。
+# ============================================================================
+
+# ==================== 硬件接口 ====================
+# 实际拓扑（无 USB-CAN 适配器！）：
+#     PC(N100) ──Type-C──> 下位机(dm02/STM32H7) ──┬─ FDCAN1 ─> 6 个灵足 RS-02
+#                                                 └─ FDCAN2 ─> 6 个灵足 RS-02
+#   下位机做三件事：① 把 PC 下发的 MIT 指令中继到 CAN
+#                   ② 回传 IMU（欧拉角 + ★陀螺仪角速度）
+#                   ③ 回传 12 个电机状态
+#   协议见 interface/host_link.py 与固件 dm02/User_File/task/lgdog_link.h
+# 后端选择：auto = 只选真机（找不到串口就报错，绝不悄悄退化）；stub = 干跑假机器人
+#   ★ 命令行 --backend / --dry-run 会覆盖这里的值
+backend: "auto"
+adapter: "host_link"           # host_link = 经下位机中转（本机实际用法）
+hardware_map: null             # 真机映射表路径；null = 用同目录的 hardware_map.yaml
+serial_port: "/dev/ttyACM0"    # 下位机的 USB CDC 虚拟串口（插上后 ls /dev/ttyACM* / ttyUSB*）
+serial_baud: 115200            # USB CDC 会忽略这个值，填个常见值即可
+num_can_buses: 2               # ★ 两条 FDCAN，每条 6 个电机（见 hardware_map.yaml）
+motor_model: "rs-02"           # 灵足 02（英名 RobStride rs-02，固件里是 MOTOR_LZ_02）
+debug: false
+
+# ---- 备选：绕过下位机、用 USB-CAN 适配器直连电机（调试/标定单电机时有用）----
+# adapter: "dm_usb"            # 达妙 DM-MC02 当纯 USB-CAN 用
+# can_baud: 1000000            # CAN 侧波特率
+
+# ==================== 手柄（遥操作输入，直接插上位机）====================
+# 拓扑（2026-09）：人手输入 = USB 手柄，直接接上位机。
+#   下位机里的遥控代码（remote_control / control_behaviour / BSP/UART）已整体删除。
+#   上位机同时握着三种输入：手柄（人）/ 策略（RL）/ 以及两者的仲裁。
+#
+# ★ 轴号/按键号**因手柄型号而异**，不要猜 —— 先跑：
+#       python tools/gamepad_probe.py --suggest
+#   把两个摇杆推到底、按键按一遍，把实测出来的号填到下面。
+#
+# ★ 权限：读 /dev/input/event* 需要 root 或在 input 组：
+#       sudo usermod -aG input $USER      # 之后要【注销重新登录】
+#
+# ★ 安全设计 = 死人开关（dead-man switch）：
+#     不按任何键        = 保持：只站立，不放行策略
+#     按住 run 键       = 运行：放行 RL 策略
+#     按一下 estop 键   = 急停：闩锁，再按一下解除
+#   为什么要"按住才跑"：四足失控就是真摔。松手这个最自然的动作直接等价于停机，
+#   不需要人在慌张时还记得该按哪个键。
+teleop:
+  enabled: true
+  device: "auto"              # auto = 自动挑最像手柄的那个；也可写死 /dev/input/event5
+  # backend: auto = evdev → joydev → 键盘 → stub 依次退化
+  #         也可写死 evdev / joydev / keyboard / stub
+  backend: "auto"
+  watchdog_ms: 500.0          # ★ 用 EV_SYN 心跳判失联（手柄静止不发轴事件，但不能算失联）
+  stop_on_pad_lost: true
+
+  axes:
+    vx: 1                     # ← 实测：推左摇杆【上下】的轴号
+    vy: 0                     # ← 实测：左摇杆【左右】
+    wz: 3                     # ← 实测：右摇杆【左右】
+  invert:
+    vx: true                  # ← 推杆向前通常给出负值，所以默认取反；实测确认
+    vy: false
+    wz: false
+
+  buttons:
+    run: 0                    # ← 实测：要【按住】才跑的那个键（建议用肩键/扳机）
+    estop: 1                  # ← 实测：急停键（按一下闩锁）
+    aux: 2                    # 备用
+
+  deadband: 0.08
+  lpf_alpha: 0.25             # 摇杆一阶低通
+  max_vx: 0.6                 # 第一轮实机建议先用保守值，站稳再放开
+  max_vy: 0.2
+  max_yaw: 0.4
+
+  # ---- 键盘兜底（手柄不在时自动退化到这里）----
+  # 为什么需要：N100 上不一定总插着手柄；开发/台架调试时用键盘更方便。
+  keyboard:
+    enabled: true
+    key_vx_pos: ["w", "up"]      # 前进
+    key_vx_neg: ["s", "down"]    # 后退
+    key_vy_pos: ["a", "left"]    # 左移
+    key_vy_neg: ["d", "right"]   # 右移
+    key_wz_pos: ["q"]            # 左转
+    key_wz_neg: ["e"]            # 右转
+    key_run:   ["space"]         # ★ 按住才跑（死人开关）
+    key_estop: ["x"]             # 按一下急停（闩锁）
+    key_quit:  ["escape"]        # 退出
+    # ★★ 终端只给按键事件、不给松开事件 —— 没法直接判断"键还按着没"。
+    #    这里用"按键自动重复"来判定：按住时终端会按 autorepeat 速率反复发同一字符，
+    #    于是"最近 hold_timeout_ms 内见过该键"就等价于"还按着"。
+    #    ⚠️ 前提是系统开着键盘自动重复（Linux 终端默认开）。若被关掉（xset -r），
+    #       按住只会来一次事件、死人开关会失效 —— 那种情况请把 run_is_toggle 设为 true，
+    #       改成"按一下空格切换运行/保持"（安全性下降，仅台架调试用）。
+    hold_timeout_ms: 400.0
+    run_is_toggle: false
+
+
+  # 【朝向保持层 2026-10-06】见 policy/heading_hold.py。策略观测里没有绝对朝向，
+  # 训练时由环境的朝向控制器闭合 yaw 环；部署直接下发 wz=0 会累积偏航漂移
+  # （实测 Isaac 直行 40s 漂 -75.7°，开本层后 -8.4°）。
+  #   heading_hold: true 时，操作杆 yaw 输入先积分成"朝向目标"，下发给策略的
+  #   wz = clamp(heading_p × 朝向误差, ±heading_wz_max) —— 与训练同一控制律。
+  #   按住转向键 = 以该速率转动目标；松开 = 目标冻结、机器人把朝向拉回并保持。
+  #   ⚠️ 默认【false】= 不动原行为。2026-10-06 首版把速率积分进目标再让 P 控制器追，
+  #   误差稳定在 r/p≈4rad>π ⇒ wrap 反相 ⇒ 转弯卡死（按住转向键 3 秒只转 0.25rad）。
+  #   已修正为【速率透传 + 松手保持】双模式；改 true 前先用 sim2sim --heading-hold 验证手感。
+  heading_hold: false
+  heading_p: 0.5          # 与训练一致，别乱改
+  heading_wz_max: 2.0     # 训练里 heading_command 的 clip 值（超过即 out-of-distribution）
+  heading_hold_dt: 0.02   # 控制周期 [s]（50Hz）
+# ==================== IMU（由下位机提供，经 Type-C 回传欧拉角）====================
+# ★ 这些值全都是【未知】的，必须先用 tools/link_sniffer.py 抓真实帧再填，不要猜。
+#   尤其 euler_convention：欧拉角有 12 种约定，猜错会让 projected_gravity 完全错位，
+#   机器人一上电就往一边倒。
+imu:
+  # ⚠️ 走 host_link（下位机中转）时，下面的 frame_id/frame_len/byteoffset 全都不需要 ——
+  #    这些是给"下位机只吐裸帧、上位机自己解包"的 UsbEulerImuSource 用的。
+  #    host_link 已经按协议解出 roll/pitch/yaw/gyro/accel/quat 了。
+  source: "usb_euler"          # usb_euler（下位机欧拉角）| stub（干跑）
+
+  # ---- ★ 姿态来源：用欧拉角重建 还是 直接用下位机四元数 ----
+  # euler = 用 roll/pitch/yaw 重建（默认；用户确认下位机是"处理成欧拉角回传"的那条路）
+  # quat  = 直接用固件 IMU.q
+  # ★ 启动时会打印两者的夹角做交叉校验：
+  #     夹角 ≈ 0°    → 两者一致，用哪个都行
+  #     夹角 ≈ 180°  → 固件的 q 是"世界→机体"（转置/共轭关系），必须换算法
+  #   这是解析阶段标记的最高危项（imu_task.c 的 Mahony 用旋转矩阵第 3 行当重力，
+  #   而 pitch=asin(+R20) 与标准 ZYX 疑似反号），务必用 tools/imu_check.py 定标。
+  attitude_source: "euler"
+
+  # ---- 下位机回传量的单位（★ 固件实测：弧度，不是度）----
+  # 依据 dm02/User_File/task/imu_task.c：IMU.Roll/Pitch/Yaw 直接取 mahony.roll/pitch/yaw，
+  # 且偏航回绕判据用的是 3.1415926f（弧度）而不是 180.0f。
+  # 若实测发现是度（静止倾角算出 500° 这种），改成 true，或命令行加 --imu-degrees。
+  euler_unit_is_degree: false
+  euler_scale: null            # 逐字段比例尺；null = 只按 euler_unit_is_degree 换算
+  euler_convention: "rpy_zyx_intrinsic"   # 或 "ypr_zyx_intrinsic"（取决于下位机发的顺序）
+
+  # ---- 逐字段/逐轴符号（单位与安装朝向之外的第三种偏差，定标用）----
+  # 顺序都是 [roll/x, pitch/y, yaw/z]。静止不动时用 tools/imu_check.py 对着加计定。
+  euler_sign: [1.0, 1.0, 1.0]
+  gyro_sign:  [1.0, 1.0, 1.0]
+
+  # ---- ★ IMU 安装变换：IMU 系 → 机体系 ----
+  # 芯片在机身上绕 Z 转了 180°（用户确认：IMU 的 X 向后、Y 向右、Z 向上，装在几何中央）。
+  # 变换矩阵在 spec.IMU_MOUNT_PERM/SIGN 里，由 interface/imu_mount.py 执行。
+  # ★ 关掉它 = 把 IMU 系的角速度与重力直接喂给策略 → 机器人一上电就往一边倒。
+  #   只在对拍"到底是不是变换写错了"时关掉做 A/B。
+  apply_mount_transform: true
+
+  max_age_ms: 200.0
+
+  # ---- ★★ 角速度：策略必需，但欧拉角给不出 ----
+  # 若下位机的帧里【同时】有陀螺仪角速度，填上下面两个即可（这是正解）：
+  gyro_offset: null            # 角速度字段的字节偏移；null = 该帧没有角速度
+  gyro_dtype: "f4"
+  gyro_scale: null
+  #
+  # 若确实没有角速度，只能选一个兜底（都会让观测偏离训练分布）：
+  #   derived = 对欧拉角差分反推（有一拍延迟 + 量化噪声，只适合低速站立/微走）
+  #   zero    = 恒置 0（观测缺一段，策略行为不可信，只用于确认链路通）
+  gyro_mode: "derived"
+  derived_alpha: 0.4           # 差分结果的一阶低通系数（0=不滤波，越大越平滑越滞后）
+
+# ==================== 控制 ====================
+# ★ control_freq 必须等于 spec.CONTROL_FREQ（= 1/(SIM_DT*DECIMATION) = 50Hz）。
+#   改这里不会自动同步 sim2sim，check_alignment.py 会报错。
+control_freq: 50
+
+# PD 增益：默认取【训练时的 control.stiffness / control.damping】，每腿 (hip, thigh, calf)。
+# 策略是在这个 PD 律下训练的，上真机第一轮先照搬；RS-02 的 MIT 模式 kp 范围 0~500、kd 0~5。
+kp: [30.0, 30.0, 30.0]
+# ★ 2026-10-02：跟随当前训练线（V32 等）由 0.8 改为 1.2。
+#   ⚠️ 这里只是【没有契约声明时】的兜底：每份策略旁边的 policy.json 里的
+#      control_contract.kp/kd 会覆盖它（老策略训练时是 0.8，各自声明即可）。
+kd: [1.2, 1.2, 1.2]
+
+# 指令上限（第一轮实机建议先用下面的保守值，站稳后再放开到训练范围）
+max_vx: 0.6
+max_vy: 0.2
+max_yaw_rate: 0.4
+
+# ==================== 策略 ====================
+policy:
+  # 留空 = 用 spec.py 的 ACTION_SCALE；填了就覆盖（会与训练不一致，仅在 A/B 时用）
+  action_scale: null
+  # 零指令抑制：与 sim2sim 的 cmd 死区规则一致（spec.CMD_DEADZONE_XY = 0.2）
+  enable_zero_cmd_suppression: true
+  # 零指令时把动作置 0、只保持默认站姿（避免策略在零指令下"划水"）
+  hold_zero_command_pose: true
+  # 从"站立保持"切到"策略输出"的过渡时间 [s]
+  release_target_blend_s: 0.30
+  # 判定"有指令"的阈值（与训练/观测口径一致）
+  release_command_hold_s: 0.12
+  release_posture_max_err: 0.35
+  require_user_confirm: true   # 进入策略前等人工回车确认
+
+# ==================== 站立保持（策略释放前的姿态维持）====================
+# 不做复杂的高度查表（那需要按 LgDog1 腿长重新推导），只做：
+#   默认站姿 PD 保持 + 可选的水平姿态修正（增益默认 0 = 不干预）
+stand_balance:
+  enabled: true
+  # 水平修正：按 IMU 的 roll/pitch 往髋(横滚)/大腿(俯仰)上叠加小量修正
+  kp_roll: 0.0                 # 0 = 关闭（默认；标定后再开）
+  kp_pitch: 0.0
+  kd_roll_rate: 0.0
+  kd_pitch_rate: 0.0
+  max_correction: 0.15         # 单个关节叠加修正的幅值上限 [rad]
+  stable_roll_deg: 6.0
+  stable_pitch_deg: 8.0
+  stable_gyro_deg_s: 45.0
+  enter_hold_s: 1.0
+
+# ==================== 启动序列 ====================
+startup:
+  enabled: true
+  soft_hold_duration: 1.0      # 先按实测姿态软保持，kp 从 soft_hold_kp_scale 升到 1
+  soft_hold_kp_scale: 0.125
+  ramp_kp_time: 1.0            # kp 斜坡时间 [s]
+  transition_time_min: 2.0     # 从当前姿态插值到站姿的最短时间 [s]
+  transition_time_max: 6.0     # 最长时间 [s]
+  transition_seconds_per_rad: 1.5
+  timeout_extra: 3.0
+  hold_time: 1.0               # 到位后再保持多久
+  settle_pos_threshold: 0.30   # 到位判据：关节角误差 [rad]
+  settle_vel_threshold: 0.6    # 到位判据：关节速度 [rad/s]
+  max_dev_warn: 1.5            # 起点与站姿偏差 > 此值只警告
+  max_dev_abort: 3.0           # > 此值直接放弃（姿态太离谱，别硬掰）
+  feedback_timeout_s: 5.0      # 等全部电机反馈的超时
+
+# ==================== 安全 ====================
+safety:
+  # ★★ 关节限位夹取（2026-09-27 起这是【唯一】的绝对行程保护）★★
+  # 下位机固件原来对每个电机有自己的 Pos_min/Pos_max 软限位，桥接模式下会把上位机
+  # 目标夹住；那道板侧护栏【已被删除】（它只会静默夹住目标、并静默把前馈力矩置 0，
+  # 制造"PC 发的角度和电机到的角度对不上"的假象）。于是行程保护全落到上位机。
+  # ★ 为什么不能只靠下面的 max_target_offset：那是"相对默认站姿"的框，它本身就会
+  #   越出关节限位 —— calf 默认 +0.5、框到 +1.1，而 URDF 限位只到 +0.7。
+  #   仿真里这一越界由 PhysX 的关节限位兜住；真机现在只有这里兜。
+  # ⚠️ 这一层是【零点依赖】的：零点偏 δ，保护边界也偏 δ —— 所以零点标定比之前更关键。
+  clamp_to_joint_limits: true
+  joint_limit_margin_rad: 0.0  # 在 URDF 限位内侧再收一点 [rad]（0 = 就用限位本身）
+
+  max_target_offset: 0.6       # 单关节目标相对默认站姿的偏移上限 [rad]，超了截断
+  clip_to_brake: 3             # 连续截断多少帧后升级为阻尼刹车
+  max_ang_vel: 10.0            # |ω| 超过此值 [rad/s] → 阻尼刹车
+  max_tilt_z: -0.3             # projected_gravity.z 低于此值判倾倒（≈ 机身倾斜 >72°）
+  imu_age_warn_ms: 60.0
+  imu_age_stop_ms: 200.0
+  watchdog_timeout_s: 0.5      # 控制环超时（超过 control_dt 这么多就报警）
+
+# ==================== 日志 ====================
+# ==================== 自动日志 ====================
+# main.py 一启动就自动建 logs/<tag>_<时间>/ 并开始记录，无需任何 flag。
+#   meta.json     配置快照 + spec 指纹 + 策略 md5（事后排查"配置漂移"全靠它）
+#   state.csv     控制周期逐帧摘要（一行 = 一个控制周期）
+#   events.jsonl  事件流（状态切换/急停/失联/安全触发），每条立即 flush
+#   data.npz      完整 obs / action / target_q / q / dq（结束时一次性写）
+#   summary.txt   人读总结
+#   latest        指向最近一次 session 的软链接
+log:
+  enabled: true
+  dir: "logs"
+  every: 1                 # 每 N 个控制周期写一行 state.csv（50Hz 时 1 行/20ms）
+  flush_interval_s: 1.0    # CSV 缓冲多久刷一次（事件流是每条立即刷）
+  save_npz: true           # 结束时把完整 obs/action/target 存成 data.npz
+  max_size_mb: 500         # ★ state.csv 超过这个就停写（事件流继续）—— 防写满磁盘
+  min_free_mb: 500         # ★ 磁盘剩余低于这个就停写 —— 真机上日志写满磁盘是很难受的故障

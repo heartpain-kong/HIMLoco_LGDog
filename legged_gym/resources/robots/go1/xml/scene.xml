@@ -1,0 +1,108 @@
+<mujoco model="go1_scene_fusion">
+    <!-- ==================================================================
+         融合版 Go1 sim2sim 场景
+         = 用户原有：平地出生区 + 3° 坡（中线）+ 5cm 楼梯（右侧 y=1.5）
+         + uw-himloco 地图障碍（左侧 -y 区域，坐标沿用 uw 原值）：
+           30cm 高墙 / 限高杆 / T 型楼梯(10cm级,顶0.4m) / 斜坡木桥 /
+           10° 斜坡×2 / 绕杆阵 / 5cm 台阶组 / 斜坡 / 碎石堆
+         来源障碍：uw-himloco dog_terrain.xml（障碍 geom 段，不含狗模型）
+         ================================================================== -->
+    <include file="go1.xml"/>
+    <statistic center="0 0 0.4" extent="1.5"/>
+    <visual>
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+    </visual>
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+            markrgb="0.8 0.8 0.8" width="300" height="300"/>
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    </asset>
+    <worldbody>
+        <light pos="0 0 5" dir="0 0 -1" directional="true"/>
+        <geom name="ground" type="plane" size="0 0 0.05" material="groundplane" friction="1.0 0.1 0.01"/>
+
+
+        <!-- 【30cm 高墙】旋转90°，与 T 型楼梯中心线 y=-3.50 对齐 -->
+        <geom name="uw_wall30" pos="1.8 -7.0 0.15" type="box" size="0.025 0.5 0.15"
+              quat="0.7071068 0.0 0.0 0.7071068" rgba="1.0 0.9 0.4 1.0"/>
+
+        <!-- 【沙砾碎木坑】（坑内两块填充） -->
+        <geom name="uw_pit1" pos="4.8361 -12.5 0.075" type="box" size="0.5 0.5 0.075" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_pit2" pos="5.8361 -12.0 0.075" type="box" size="0.5 1.0 0.075" rgba="0.75 0.72 0.55 1.0"/>
+
+        <!-- 【限高杆】两立柱 + 横杆 -->
+        <geom name="uw_pole1" pos="6.2 -9.0 0.155" type="cylinder" size="0.025 0.155" rgba="0.8 0.1 0.1 1.0" />
+        <geom name="uw_pole2" pos="5.2 -9.0 0.155" type="cylinder" size="0.025 0.155" rgba="0.8 0.1 0.1 1.0" />
+        <geom name="uw_pole_bar" pos="5.7 -9.0 0.325" type="cylinder" size="0.015 0.5"
+              quat="0.7071068 0.0 0.7071068 0.0" rgba="1.0 0.9 0.4 1.0"/>
+
+        <!-- 【T 型楼梯】10cm 级，最高平台 0.4m（y=-3.50 中心线） -->
+        <geom name="uw_ts_u1" pos="1.80 -4.75 0.05" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_ts_u2" pos="1.80 -4.45 0.15" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_u3" pos="1.80 -4.15 0.25" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_plat" pos="1.80 -3.50 0.35" type="box" size="0.5 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_d1" pos="1.80 -2.85 0.25" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_d2" pos="1.80 -2.55 0.15" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_d3" pos="1.80 -2.25 0.05" type="box" size="0.15 0.5 0.05" quat="0.7071068 0.0 0.0 0.7071068" rgba="0.75 0.72 0.55 1.0"/>
+        <!-- T 型楼梯 +x 支路 -->
+        <geom name="uw_ts_x1" pos="2.45 -3.50 0.25" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_x2" pos="2.75 -3.50 0.15" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_x3" pos="3.05 -3.50 0.05" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+        <!-- T 型楼梯 -x 支路 -->
+        <geom name="uw_ts_n1" pos="1.15 -3.50 0.25" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_n2" pos="0.85 -3.50 0.15" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_ts_n3" pos="0.55 -3.50 0.05" type="box" size="0.15 0.5 0.05" rgba="0.75 0.72 0.55 1.0"/>
+
+        <!-- 【斜坡木桥 A/B + 平台 + 立柱】 -->
+        <geom name="uw_bridge_slopeA" pos="1.8 -0.88 0.1" type="box" size="0.40 0.5 0.005" quat="0.701836 0.086175 -0.086175 0.701836" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_plat1" pos="1.8 0.0 0.10" type="box" size="0.5 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_sup1" pos="2.65 0.0 0.10" type="box" size="0.2 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_sup2" pos="3.2 0.0 0.10" type="box" size="0.2 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_sup3" pos="3.75 0.0 0.10" type="box" size="0.2 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_sup4" pos="4.3 0.0 0.10" type="box" size="0.2 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_sup5" pos="4.85 0.0 0.10" type="box" size="0.2 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_plat2" pos="5.7 -0.5 0.10" type="box" size="0.5 1.0 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_slopeB" pos="4.8002 -1.0 0.0951" type="box" size="0.4133 0.5 0.005" quat="0.992546 0.0 -0.121869 0.0" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_pole1" pos="5.35 -2.25 0.10" type="box" size="0.1 0.75 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_pole2" pos="5.65 -2.25 0.10" type="box" size="0.1 0.75 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_pole3" pos="5.95 -2.25 0.10" type="box" size="0.1 0.75 0.10" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_bridge_plat3" pos="5.7 -3.5 0.10" type="box" size="0.5 0.5 0.10" rgba="0.75 0.72 0.55 1.0"/>
+
+        <!-- 【10° 斜坡 ×2】（宽 4m + 宽 3m，高端相接） -->
+        <geom name="uw_slope10_a" pos="4.6338 -5.0 0.0951" type="box" size="0.5759 2.0 0.005"
+              quat="0.9961947 0.0 -0.0871557 0.0" rgba="0.75 0.72 0.55 1.0"/>
+        <geom name="uw_slope10_b" pos="5.7681 -5.5 0.0951" type="box" size="0.5759 1.5 0.005"
+              quat="0.9961947 0.0 0.0871557 0.0" rgba="0.75 0.72 0.55 1.0"/>
+
+        <!-- 【绕杆阵】4 根杆（底座 + 竖杆），间隔 1m -->
+        <geom name="uw_slalom_b1" pos="1.8 -10.5 0.02" type="cylinder" size="0.05 0.02" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_p1" pos="1.8 -10.5 0.37" type="cylinder" size="0.015 0.33" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_b2" pos="1.8 -11.5 0.02" type="cylinder" size="0.05 0.02" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_p2" pos="1.8 -11.5 0.37" type="cylinder" size="0.015 0.33" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_b3" pos="1.8 -12.5 0.02" type="cylinder" size="0.05 0.02" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_p3" pos="1.8 -12.5 0.37" type="cylinder" size="0.015 0.33" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_b4" pos="2.8 -12.5 0.02" type="cylinder" size="0.05 0.02" rgba="0.75 0.72 0.55 1.0" />
+        <geom name="uw_slalom_p4" pos="2.8 -12.5 0.37" type="cylinder" size="0.015 0.33" rgba="0.75 0.72 0.55 1.0" />
+
+        <!-- 【5cm 台阶组】7 级上 + 顶平台 0.4m + 7 级下（右侧远处 y=2.0） -->
+        <geom name="uw_s5_a1" pos="1.0 2.0 0.025" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a2" pos="1.3 2.0 0.075" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a3" pos="1.6 2.0 0.125" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a4" pos="1.9 2.0 0.175" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a5" pos="2.2 2.0 0.225" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a6" pos="2.5 2.0 0.275" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_a7" pos="2.8 2.0 0.325" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_top" pos="3.45 2.0 0.375" type="box" size="0.5 1.0 0.025" />
+        <geom name="uw_s5_d1" pos="4.1 2.0 0.325" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d2" pos="4.4 2.0 0.275" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d3" pos="4.7 2.0 0.225" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d4" pos="5.0 2.0 0.175" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d5" pos="5.3 2.0 0.125" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d6" pos="5.6 2.0 0.075" type="box" size="0.15 1.0 0.025" />
+        <geom name="uw_s5_d7" pos="5.9 2.0 0.025" type="box" size="0.15 1.0 0.025" />
+
+
+    </worldbody>
+</mujoco>

@@ -1,0 +1,27 @@
+# LgDog1 sim2real 部署侧依赖（N100 / x86_64 Linux）
+#
+# 设计意图：真机上只装必需的，不把训练环境（Isaac Gym / mujoco）搬过去。
+# 训练环境（himloco conda env）里跑 tools/check_alignment.py，那边有 torch + mujoco。
+#
+# 一键安装： ./install.sh                （有网）
+#            ./install.sh --wheels DIR   （离线，DIR 由 make_offline_bundle.sh 生成）
+# 装完自测： ./selftest.sh
+
+numpy>=1.21
+PyYAML>=5.4
+# 策略是 TorchScript。N100 是 x86 CPU-only，装 CPU 版 torch 即可：
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=1.10
+# 下位机是 USB CDC 虚拟串口（PC 不直接碰 CAN），走 pyserial
+pyserial>=3.5
+
+# ★ 本栈【不依赖】mujoco / isaacgym / legged_gym：
+#   · 干跑验证用 backends/stub_backend.py（纯 numpy，不需要物理引擎）
+#   · 上位机只需要 torch 跑 TorchScript 策略 + pyserial 收发帧
+
+# ★ 手柄输入【不需要】任何新依赖：interface/teleop.py 直接读 /dev/input/event*
+#   并对内核 ioctl（EVIOCGNAME/EVIOCGBIT/EVIOCGABS），只用标准库。
+#   若用 joydev 老接口（/dev/input/js*）也是直接读，同样无依赖。
+#
+# 可选：
+# pynput>=1.7        # 只有在真机上用键盘发指令时才需要

@@ -1,0 +1,73 @@
+{
+  "weight_fingerprint": "bd3c045be439",
+  "name": "V6_h（训练 run logs/flat_LgDog1/V6_h 的最终 checkpoint）",
+  "source_file": "legged_gym/logs/flat_LgDog1/exported/policies/policy_V6_12400.pt",
+  "source_checkpoint": "legged_gym/logs/flat_LgDog1/V6_h/model_12400.pt（iteration 12400，该 run 最后一份；训练 09-20 22:52 ~ 09-21 12:17）",
+  "file_size": 992110,
+  "tensors": 14,
+  "io": "270 维输入 → 12 维动作（观测布局与 spec.py 完全一致）",
+  "control_contract": {
+    "decimation": 2,
+    "control_freq_hz": 100.0,
+    "control_dt_ms": 10.0,
+    "obs_history_len": 6,
+    "obs_history_span_ms": 50.0,
+    "note": "★★ 这是本方案与当前主策略【唯一】的部署契约差异：主策略是 decimation=4（50Hz、跨度 100ms）。换策略必须同时换频率，否则策略拿到的是错的时间尺度（不报错，但动作节奏全乱）。",
+    "kp": 30.0,
+    "kd": 0.8,
+    "action_scale": 0.25,
+    "default_dof_pos": [
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5,
+      0.0,
+      -0.4,
+      0.5
+    ],
+    "default_dof_pos_note": "训练于 2026-09-20/21，当时默认站姿是 (0,-0.4,+0.5)。★ 2026-10-02 起新训练线改成了 (0,-0.20,+0.10)，但这份策略必须用老站姿（它决定了 obs[9:21] 的零点与站立目标）—— 所以站姿也是契约项，main.py 会按这里覆盖 spec 默认值。",
+    "obs_one_step": 45,
+    "obs_one_step_note": "45 = 旧布局（cmd/omega/pg/q/dq/act，无身高指令通道）。★ 2026-10-01 起训练侧新增身高指令通道 → 单帧 46 维、总计 276，这份策略是那之前训的，必须用 45 维布局；main.py/PolicyRunner 会按这里切换。"
+  },
+  "same_as_current": {
+    "sim_dt": 0.005,
+    "kp": 30.0,
+    "kd": 0.8,
+    "action_scale": 0.25,
+    "clip_obs": 100.0,
+    "clip_actions": 100.0,
+    "obs_scales": {
+      "lin_vel": 2.0,
+      "ang_vel": 0.25,
+      "dof_pos": 1.0,
+      "dof_vel": 0.05
+    },
+    "default_dof_pos": "每腿 (hip, thigh, calf) = (0, -0.4, +0.5)",
+    "spawn_z": 0.37
+  },
+  "other_training_side_diffs": "与当前 run(V20) 的 config_snapshot 相比另有 37 处差异，全部是 rewards.* / terrain.* / domain_rand.* / commands.* 这类【训练侧】参数，不影响部署契约。",
+  "validated": {
+    "when": "2026-09-27 21:36（本次补做的；此前 V6_h 从未出现在任何 sim2sim 录制里）",
+    "recording": "验证录制_sim2sim_600s_bd3c045be439.npz（60000 控制步 = 600s @100Hz）",
+    "command": "cd <LgRobotDog>/legged_gym/legged_gym/scripts && python -u sim2sim.py --snapshot ../../logs/flat_LgDog1/V6_h/config_snapshot.json --policy ../../logs/flat_LgDog1/exported/policies/policy_V6_12400.pt --no-render --no-keyboard --gamepad off --clamp-vel --cmd-schedule '0:1.0'",
+    "attitude": [
+      "未翻倒（600 s）",
+      "pitch 前高后低: 均值 +4.52°  中位 +5.39°  p5 -0.03°  p95 +7.14°  std 2.41°",
+      "roll  侧倾    : 均值 +0.82°  中位 +0.84°  std 1.03°",
+      "机身高度 z    : 均值 0.336 m  中位 0.326 m",
+      "航向保持      : 直线率 1.1%（路径 404.0m / 直线 4.3m）yaw 累计 +307° 横向偏移 +1.9m"
+    ],
+    "vs_current_policy": "主策略 a13b6ff17f79（decimation=4）同口径实测 pitch 均值 +7.10°、z 中位 0.330 m。auto_sim2sim_check.sh 的判据是 pitch ≤ ±4° 且 z ≥ 0.24：V6_h 的 +4.52° 明显更接近达标，但仍未达标；两者在 600 s 内都累计了大幅 yaw（打圈）。"
+  },
+  "limits": [
+    "从未在真机上跑过",
+    "从未在 100Hz 下测过 N100 的时序资格：推理预算从 20ms 变成 10ms，必须重测（main.py 的时序资格自检会自动判）",
+    "yaw 漂移：600 s 累计 +307°、路径 404m 而直线位移仅 4.3m —— 打圈，不能用于长距离直行",
+    "这是「历史最好之一」，不是「已验证可用」；上真机按 PORTING.md 流程走"
+  ]
+}
